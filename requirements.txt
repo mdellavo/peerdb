@@ -1,0 +1,6 @@
+sqlparse
+msgpack
+uvloop
+pytest
+aiohttp
+pytest-asyncio
