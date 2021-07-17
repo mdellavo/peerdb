@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+  node-a:
+    build: .
+    command: python -m peerdb
+  node-b:
+    build: .
+    command: python -m peerdb --peer node-a:8889
+    depends_on:
+      - node-a
+  node-c:
+    build: .
+    command: python -m peerdb --peer node-a:8889
+    depends_on:
+      - node-a

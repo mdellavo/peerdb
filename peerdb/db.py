@@ -48,7 +48,7 @@ class DatabaseWorker(threading.Thread):
                 log.exception("error running %s", fn)
                 future.set_exception(e)
             t2 = time.time()
-            log.debug("ran %s in %.04fms", fn, (t2-t1) * 1000)
+            # log.debug("ran %s in %.04fms", fn, (t2-t1) * 1000)
 
         log.info("%s shutdown", self.name)
 
@@ -65,6 +65,9 @@ class Cursor:
         if not params:
             params = tuple()
         return await self.dbm.dispatch(self.cursor.execute, sql, params)
+
+    async def executemany(self, sql, params):
+        return await self.dbm.dispatch(self.cursor.executemany, sql, params)
 
     async def fetchall(self):
         return await self.dbm.dispatch(self.cursor.fetchall)

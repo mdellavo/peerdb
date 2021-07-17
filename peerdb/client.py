@@ -1,10 +1,13 @@
 import asyncio
 import logging
 import urllib.parse
+import time
 
-from .net import Connection, ClientMessageTypes, ClientResponseTypes
+from peerdb.net import Connection
+from peerdb.proto import ClientMessageTypes, ResponseTypes
 
 log = logging.getLogger("peerdb")
+
 
 class ClientError(Exception):
     pass
@@ -22,14 +25,21 @@ class Cursor:
         msg = (ClientMessageTypes.CLOSE, self.cursor_id)
         await self.connection.con.send(msg)
         resp = await self.connection.con.recv()
-        if resp[0] != ClientResponseTypes.OK:
+        if resp[0] != ResponseTypes.OK:
             raise ClientError(resp[1])
 
     async def execute(self, sql, parameters=None):
         msg = (ClientMessageTypes.EXECUTE, self.cursor_id, sql, parameters)
         await self.connection.con.send(msg)
         resp = await self.connection.con.recv()
-        if resp[0] != ClientResponseTypes.OK:
+        if resp[0] != ResponseTypes.OK:
+            raise ClientError(resp[1])
+
+    async def executemany(self, sql, parameters):
+        msg = (ClientMessageTypes.EXECUTEMANY, self.cursor_id, sql, list(parameters))
+        await self.connection.con.send(msg)
+        resp = await self.connection.con.recv()
+        if resp[0] != ResponseTypes.OK:
             raise ClientError(resp[1])
 
     async def fetchmany(self, size=BATCH_SIZE):
@@ -39,7 +49,7 @@ class Cursor:
         msg = (ClientMessageTypes.FETCHMANY, self.cursor_id, size)
         await self.connection.con.send(msg)
         resp = await self.connection.con.recv()
-        if resp[0] != ClientResponseTypes.OK:
+        if resp[0] != ResponseTypes.OK:
             raise ClientError(resp[1])
         return resp[1]
 
@@ -59,14 +69,24 @@ class ClientConnection:
         msg = (ClientMessageTypes.HELLO, name)
         await self.con.send(msg)
         resp = await self.con.recv()
-        if resp[0] != ClientResponseTypes.OK:
+        if resp[0] != ResponseTypes.OK:
             raise ClientError(resp[1])
+
+    async def ping(self):
+        msg = (ClientMessageTypes.PING, time.time())
+        await self.con.send(msg)
+        resp = await self.con.recv()
+        if resp[0] != ResponseTypes.OK:
+            raise ClientError(resp[1])
+        ts = resp[1]
+        delta = time.time() - ts
+        log.info("ping took %.04fms", delta * 1000)
 
     async def cursor(self, factory=Cursor):
         msg = (ClientMessageTypes.CURSOR,)
         await self.con.send(msg)
         resp = await self.con.recv()
-        if resp[0] != ClientResponseTypes.OK:
+        if resp[0] != ResponseTypes.OK:
             raise ClientError(resp[1])
         cursor_id = resp[1]
         return factory(self, cursor_id)

@@ -1,28 +1,13 @@
 import asyncio
-from enum import IntEnum, auto
+import logging
 
 import msgpack
 
+from peerdb.utils import Timer
+
+log = logging.getLogger(__name__)
+
 BUF_LEN = 4096
-
-class PeerMessageTypes(IntEnum):
-    HELLO = auto()
-    HEARTBEAT = auto()
-    APPEND_LOG = auto()
-
-
-class ClientMessageTypes(IntEnum):
-    HELLO = auto()
-    GOODBYE = auto()
-    CURSOR = auto()
-    CLOSE = auto()
-    EXECUTE = auto()
-    FETCHMANY = auto()
-
-
-class ClientResponseTypes(IntEnum):
-    OK = 1
-    ERR = -1
 
 
 class Connection:
@@ -62,6 +47,8 @@ class Connection:
 
     async def send(self, obj):
         payload = msgpack.packb(obj)
-        rv = self.writer.write(payload)
-        await self.writer.drain()
+        with Timer() as t:
+            rv = self.writer.write(payload)
+            await self.writer.drain()
+        log.debug("sent %d bytes in %.04fms", len(payload), t.elapsed)
         return rv

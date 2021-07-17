@@ -5,7 +5,7 @@ import logging
 from aiohttp import web
 
 
-from . import server
+from peerdb import server
 
 log = logging.getLogger("peerdb")
 
